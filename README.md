@@ -3,28 +3,25 @@
 A simple program for printing spinners and bars to stdout.
 
 ```
-Usage: sab [OPTION]... [CURR]...
-Given a min, max and current value, sab will draw bars/spinners
-to stdout. The format of the bar/spinner is read from stdin and
-is a line seperated lists of steps.
+Usage: sab [OPTION]...
+sab will draw bars/spinners based on the values piped in through
+stdin.
 
-To draw a simple bar, simply pipe your empty and full chars into
-sab, and give it the current value:
-echo -e '.\n=' | sab 35
-====......
+To draw a simple bar, simply pipe a value between 0-100 into sab:
+echo 35 | sab
+====      
 
-For a more fine grained bar, simply pipe in more steps:
-echo -e '.\n-\n=' | sab 35
-===-......
+You can customize your bar with the '--steps' option:
+echo 35 | sab -s ' -='
+===-      
 
 To draw a simple spinner, simply set the length of the bar to 1
-and set min to 0 and max to be the last step:
-echo -e '/\n-\n\\\n|' | sab -l 1 -M 3 3
-|
+and set max to be the last step:
+echo 2 | sab -l 1 -M 3 -s '/-\|'
+\
 
-sab will draw multible lines if provided with multible current
-values.
-echo -e '/\n-\n\\\n|' | sab -l 1 -M 3 0 1 2 3
+sab will draw multible lines, one for each line piped into it.
+echo -e '0\n1\n2\n3' | sab -l 1 -M 3 -s '/-\|'
 /
 -
 \
@@ -35,5 +32,6 @@ Options:
 	-l, --length=VALUE	the length of the bar (default: 10)
 	-m, --min=VALUE   	mininum value (default: 0)
 	-M, --max=VALUE   	maximum value (default: 100)
+	-s, --steps=VALUE 	list of steps (default: ' =')
 
 ```
