@@ -7,6 +7,7 @@ const heap = std.heap;
 const io = std.io;
 const math = std.math;
 const mem = std.mem;
+const unicode = std.unicode;
 
 const Clap = clap.ComptimeClap([]const u8, params);
 const Names = clap.Names;
@@ -29,33 +30,34 @@ const params = []Param{
         "maximum value (default: 100)",
         Names{ .short = 'M', .long = "max"},
     ),
+    Param.option(
+        "list of steps (default: ' =')",
+        Names.both("steps"),
+    ),
     Param.positional(""),
 };
 
 fn usage(stream: var) !void {
     try stream.write(
-        \\Usage: sab [OPTION]... [CURR]...
-        \\Given a min, max and current value, sab will draw bars/spinners
-        \\to stdout. The format of the bar/spinner is read from stdin and
-        \\is a line seperated lists of steps.
+        \\Usage: sab [OPTION]...
+        \\sab will draw bars/spinners based on the values piped in through
+        \\stdin.
         \\
-        \\To draw a simple bar, simply pipe your empty and full chars into
-        \\sab, and give it the current value:
-        \\echo -e '.\n=' | sab 35
-        \\====......
+        \\To draw a simple bar, simply pipe a value between 0-100 into sab:
+        \\echo 35 | sab
+        \\====      
         \\
-        \\For a more fine grained bar, simply pipe in more steps:
-        \\echo -e '.\n-\n=' | sab 35
-        \\===-......
+        \\You can customize your bar with the '--steps' option:
+        \\echo 35 | sab -s ' -='
+        \\===-      
         \\
         \\To draw a simple spinner, simply set the length of the bar to 1
-        \\and set min to 0 and max to be the last step:
-        \\echo -e '/\n-\n\\\n|' | sab -l 1 -M 3 3
-        \\|
+        \\and set max to be the last step:
+        \\echo 2 | sab -l 1 -M 3 -s '/-\|'
+        \\\
         \\
-        \\sab will draw multible lines if provided with multible current
-        \\values.
-        \\echo -e '/\n-\n\\\n|' | sab -l 1 -M 3 0 1 2 3
+        \\sab will draw multible lines, one for each line piped into it.
+        \\echo -e '0\n1\n2\n3' | sab -l 1 -M 3 -s '/-\|'
         \\/
         \\-
         \\\
@@ -67,7 +69,7 @@ fn usage(stream: var) !void {
     try clap.help(stream, params);
 }
 
-pub fn main() anyerror!void {
+pub fn main() !void {
     const stderr = &(try io.getStdErr()).outStream().stream;
     const stdout = &(try io.getStdOut()).outStream().stream;
     const stdin = &(try io.getStdIn()).inStream().stream;
@@ -95,20 +97,30 @@ pub fn main() anyerror!void {
     const min = try fmt.parseInt(isize, args.option("--min") orelse "0", 10);
     const max = try fmt.parseInt(isize, args.option("--max") orelse "100", 10);
     const len = try fmt.parseUnsigned(usize, args.option("--length") orelse "10", 10);
-
     const steps = blk: {
-        const lines = try stdin.readAllAlloc(allocator, 1024 * 1024);
-        const res = try split(allocator, lines, "\n");
+        const list = args.option("--steps") orelse " =";
+        const utf8_view = try unicode.Utf8View.init(list);
+        var res = std.ArrayList([]const u8).init(allocator);
+        var utf8_iter = utf8_view.iterator();
+        while (utf8_iter.nextCodepointSlice()) |step|
+            try res.append(step);
+
         if (res.len == 0)
             return error.NoSteps;
 
-        break :blk res;
+        break :blk res.toOwnedSlice();
     };
 
-    for (args.positionals()) |curr_str| {
-        const curr = try fmt.parseInt(isize, curr_str, 10);
+    var buf = try std.Buffer.initSize(allocator, 0);
+    while (io.readLineFrom(stdin, &buf)) |str| {
+        defer buf.shrink(0);
+
+        const curr = try fmt.parseInt(isize, str, 10);
         try draw(stdout, curr, min, max, len, steps);
         try stdout.write("\n");
+    } else |err| switch (err) {
+        error.EndOfStream => {},
+        else => return err,
     }
 }
 
