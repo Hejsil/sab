@@ -154,7 +154,7 @@ fn testDraw(res: []const u8, curr: isize, min: isize, max: isize, len: usize, st
     var buf: [100]u8 = undefined;
     var stream = io.SliceOutStream.init(buf[0..]);
     draw(&stream.stream, curr, min, max, len, steps) catch unreachable;
-    debug.assert(mem.eql(u8, res, stream.getWritten()));
+    debug.assertOrPanic(mem.eql(u8, res, stream.getWritten()));
 }
 
 test "draw" {
