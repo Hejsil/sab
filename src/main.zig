@@ -123,17 +123,6 @@ pub fn main() !void {
     }
 }
 
-fn split(allocator: *mem.Allocator, buffer: []const u8, split_bytes: []const u8) ![][]const u8 {
-    var res = std.ArrayList([]const u8).init(allocator);
-    defer res.deinit();
-
-    var iter = mem.split(buffer, split_bytes);
-    while (iter.next()) |s|
-        try res.append(s);
-
-    return res.toOwnedSlice();
-}
-
 fn draw(stream: var, curr: isize, min: isize, max: isize, len: usize, steps: []const []const u8) !void {
     const abs_max = @intToFloat(f64, try math.cast(usize, max - min));
     var abs_curr = @intToFloat(f64, math.max(curr - min, 0));
