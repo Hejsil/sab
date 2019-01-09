@@ -34,7 +34,6 @@ const params = []Param{
         "list of steps (default: ' =')",
         Names.both("steps"),
     ),
-    Param.positional(""),
 };
 
 fn usage(stream: var) !void {
