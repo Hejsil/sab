@@ -34,7 +34,6 @@ const params = []Param{
         "list of steps (default: ' =')",
         Names.both("steps"),
     ),
-    Param.positional(""),
 };
 
 fn usage(stream: var) !void {
@@ -123,17 +122,6 @@ pub fn main() !void {
     }
 }
 
-fn split(allocator: *mem.Allocator, buffer: []const u8, split_bytes: []const u8) ![][]const u8 {
-    var res = std.ArrayList([]const u8).init(allocator);
-    defer res.deinit();
-
-    var iter = mem.split(buffer, split_bytes);
-    while (iter.next()) |s|
-        try res.append(s);
-
-    return res.toOwnedSlice();
-}
-
 fn draw(stream: var, curr: isize, min: isize, max: isize, len: usize, steps: []const []const u8) !void {
     const abs_max = @intToFloat(f64, try math.cast(usize, max - min));
     var abs_curr = @intToFloat(f64, math.max(curr - min, 0));
@@ -154,7 +142,7 @@ fn testDraw(res: []const u8, curr: isize, min: isize, max: isize, len: usize, st
     var buf: [100]u8 = undefined;
     var stream = io.SliceOutStream.init(buf[0..]);
     draw(&stream.stream, curr, min, max, len, steps) catch unreachable;
-    debug.assert(mem.eql(u8, res, stream.getWritten()));
+    debug.assertOrPanic(mem.eql(u8, res, stream.getWritten()));
 }
 
 test "draw" {
