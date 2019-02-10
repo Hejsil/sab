@@ -1,7 +1,7 @@
 const clap = @import("zig-clap");
 const std = @import("std");
 
-const debug = std.debug;
+const testing = std.testing;
 const fmt = std.fmt;
 const heap = std.heap;
 const io = std.io;
@@ -141,8 +141,8 @@ fn draw(stream: var, curr: isize, min: isize, max: isize, len: usize, steps: []c
 fn testDraw(res: []const u8, curr: isize, min: isize, max: isize, len: usize, steps: []const []const u8) void {
     var buf: [100]u8 = undefined;
     var stream = io.SliceOutStream.init(buf[0..]);
-    draw(&stream.stream, curr, min, max, len, steps) catch unreachable;
-    debug.assertOrPanic(mem.eql(u8, res, stream.getWritten()));
+    draw(&stream.stream, curr, min, max, len, steps) catch @panic("");
+    testing.expectEqualSlices(u8, res, stream.getWritten());
 }
 
 test "draw" {
