@@ -7,6 +7,6 @@ install:
 git:
   depth: false
 script:
-  - zig/zig version
-  - zig/zig build test
-  - zig/zig build
+  - zig-linux-*/zig version
+  - zig-linux-*/zig build test
+  - zig-linux-*/zig build
