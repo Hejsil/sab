@@ -13,27 +13,31 @@ const Clap = clap.ComptimeClap([]const u8, params);
 const Names = clap.Names;
 const Param = clap.Param([]const u8);
 
-const params = []Param{
-    Param.flag(
-        "print this message to stdout",
-        Names.both("help"),
-    ),
-    Param.option(
-        "the length of the bar (default: 10)",
-        Names.both("length"),
-    ),
-    Param.option(
-        "mininum value (default: 0)",
-        Names.both("min"),
-    ),
-    Param.option(
-        "maximum value (default: 100)",
-        Names{ .short = 'M', .long = "max"},
-    ),
-    Param.option(
-        "list of steps (default: ' =')",
-        Names.both("steps"),
-    ),
+const params = [_]Param{
+    Param{
+        .id = "print this message to stdout",
+        .names = Names{ .short = 'h', .long = "help" },
+    },
+    Param{
+        .id = "the length of the bar (default: 10)",
+        .names = Names{ .short = 'l', .long = "length" },
+        .takes_value = true,
+    },
+    Param{
+        .id = "mininum value (default: 0)",
+        .names = Names{ .short = 'm', .long = "min" },
+        .takes_value = true,
+    },
+    Param{
+        .id = "maximum value (default: 100)",
+        .names = Names{ .short = 'M', .long = "max" },
+        .takes_value = true,
+    },
+    Param{
+        .id = "list of steps (default: ' =')",
+        .names = Names{ .short = 's', .long = "steps" },
+        .takes_value = true,
+    },
 };
 
 fn usage(stream: var) !void {
