@@ -77,10 +77,7 @@ pub fn main() !void {
     const stdout = &(try io.getStdOut()).outStream().stream;
     const stdin = &(try io.getStdIn()).inStream().stream;
 
-    var direct_allocator = std.heap.DirectAllocator.init();
-    defer direct_allocator.deinit();
-
-    var arena = heap.ArenaAllocator.init(&direct_allocator.allocator);
+    var arena = heap.ArenaAllocator.init(heap.direct_allocator);
     defer arena.deinit();
 
     const allocator = &arena.allocator;
