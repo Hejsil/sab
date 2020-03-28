@@ -147,20 +147,20 @@ fn testDraw(res: []const u8, curr: isize, min: isize, max: isize, len: usize, st
 }
 
 test "draw" {
-    testDraw("      ", -1, 0, 6, 6, [_][]const u8{" ", "="});
-    testDraw("      ", 0, 0, 6, 6, [_][]const u8{" ", "="});
-    testDraw("=     ", 1, 0, 6, 6, [_][]const u8{" ", "="});
-    testDraw("==    ", 2, 0, 6, 6, [_][]const u8{" ", "="});
-    testDraw("===   ", 3, 0, 6, 6, [_][]const u8{" ", "="});
-    testDraw("====  ", 4, 0, 6, 6, [_][]const u8{" ", "="});
-    testDraw("===== ", 5, 0, 6, 6, [_][]const u8{" ", "="});
-    testDraw("======", 6, 0, 6, 6, [_][]const u8{" ", "="});
-    testDraw("======", 7, 0, 6, 6, [_][]const u8{" ", "="});
-    testDraw("   ", 0, 0, 6, 3, [_][]const u8{" ", "-", "="});
-    testDraw("-  ", 1, 0, 6, 3, [_][]const u8{" ", "-", "="});
-    testDraw("=  ", 2, 0, 6, 3, [_][]const u8{" ", "-", "="});
-    testDraw("=- ", 3, 0, 6, 3, [_][]const u8{" ", "-", "="});
-    testDraw("== ", 4, 0, 6, 3, [_][]const u8{" ", "-", "="});
-    testDraw("==-", 5, 0, 6, 3, [_][]const u8{" ", "-", "="});
-    testDraw("===", 6, 0, 6, 3, [_][]const u8{" ", "-", "="});
+    testDraw("      ", -1, 0, 6, 6, [_][]const u8{ " ", "=" });
+    testDraw("      ", 0, 0, 6, 6, [_][]const u8{ " ", "=" });
+    testDraw("=     ", 1, 0, 6, 6, [_][]const u8{ " ", "=" });
+    testDraw("==    ", 2, 0, 6, 6, [_][]const u8{ " ", "=" });
+    testDraw("===   ", 3, 0, 6, 6, [_][]const u8{ " ", "=" });
+    testDraw("====  ", 4, 0, 6, 6, [_][]const u8{ " ", "=" });
+    testDraw("===== ", 5, 0, 6, 6, [_][]const u8{ " ", "=" });
+    testDraw("======", 6, 0, 6, 6, [_][]const u8{ " ", "=" });
+    testDraw("======", 7, 0, 6, 6, [_][]const u8{ " ", "=" });
+    testDraw("   ", 0, 0, 6, 3, [_][]const u8{ " ", "-", "=" });
+    testDraw("-  ", 1, 0, 6, 3, [_][]const u8{ " ", "-", "=" });
+    testDraw("=  ", 2, 0, 6, 3, [_][]const u8{ " ", "-", "=" });
+    testDraw("=- ", 3, 0, 6, 3, [_][]const u8{ " ", "-", "=" });
+    testDraw("== ", 4, 0, 6, 3, [_][]const u8{ " ", "-", "=" });
+    testDraw("==-", 5, 0, 6, 3, [_][]const u8{ " ", "-", "=" });
+    testDraw("===", 6, 0, 6, 3, [_][]const u8{ " ", "-", "=" });
 }
