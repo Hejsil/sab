@@ -9,39 +9,23 @@ const math = std.math;
 const mem = std.mem;
 const unicode = std.unicode;
 
-const Clap = clap.ComptimeClap([]const u8, params);
+const Clap = clap.ComptimeClap(clap.Help, &params);
 const Names = clap.Names;
-const Param = clap.Param([]const u8);
+const Param = clap.Param(clap.Help);
 
-const params = [_]Param{
-    Param{
-        .id = "print this message to stdout",
-        .names = Names{ .short = 'h', .long = "help" },
-    },
-    Param{
-        .id = "the length of the bar (default: 10)",
-        .names = Names{ .short = 'l', .long = "length" },
-        .takes_value = true,
-    },
-    Param{
-        .id = "mininum value (default: 0)",
-        .names = Names{ .short = 'm', .long = "min" },
-        .takes_value = true,
-    },
-    Param{
-        .id = "maximum value (default: 100)",
-        .names = Names{ .short = 'M', .long = "max" },
-        .takes_value = true,
-    },
-    Param{
-        .id = "list of steps (default: ' =')",
-        .names = Names{ .short = 's', .long = "steps" },
-        .takes_value = true,
-    },
+const params = comptime blk: {
+    @setEvalBranchQuota(100000);
+    break :blk [_]Param{
+        clap.parseParam("-h, --help            print this message to stdout") catch unreachable,
+        clap.parseParam("-l, --length <NUM>    the length of the bar (default: 10)") catch unreachable,
+        clap.parseParam("-m, --min    <NUM>    minimum value (default: 0)") catch unreachable,
+        clap.parseParam("-M, --max    <NUM>    maximum value (default: 100)") catch unreachable,
+        clap.parseParam("-s, --steps  <CHARS>  list of steps (default: ' =')") catch unreachable,
+    };
 };
 
 fn usage(stream: var) !void {
-    try stream.write(
+    try stream.writeAll(
         \\Usage: sab [OPTION]...
         \\sab will draw bars/spinners based on the values piped in through
         \\stdin.
@@ -69,22 +53,20 @@ fn usage(stream: var) !void {
         \\Options:
         \\
     );
-    try clap.help(stream, params);
+    try clap.help(stream, &params);
 }
 
 pub fn main() !void {
-    const stderr = &(try io.getStdErr()).outStream().stream;
-    const stdout = &(try io.getStdOut()).outStream().stream;
-    const stdin = &(try io.getStdIn()).inStream().stream;
+    const stderr = io.getStdErr().outStream();
+    const stdout = io.getStdOut().outStream();
+    const stdin = io.getStdIn().inStream();
 
-    var arena = heap.ArenaAllocator.init(heap.direct_allocator);
+    var arena = heap.ArenaAllocator.init(heap.page_allocator);
     defer arena.deinit();
 
     const allocator = &arena.allocator;
 
-    var arg_iter = clap.args.OsIterator.init(allocator);
-    _ = arg_iter.next() catch undefined;
-
+    var arg_iter = try clap.args.OsIterator.init(allocator);
     var args = Clap.parse(allocator, clap.args.OsIterator, &arg_iter) catch |err| {
         usage(stderr) catch {};
         return err;
@@ -104,22 +86,22 @@ pub fn main() !void {
         while (utf8_iter.nextCodepointSlice()) |step|
             try res.append(step);
 
-        if (res.len == 0)
+        if (res.items.len == 0)
             return error.NoSteps;
 
         break :blk res.toOwnedSlice();
     };
 
-    var buf = try std.Buffer.initSize(allocator, 0);
-    while (io.readLineFrom(stdin, &buf)) |str| {
-        defer buf.shrink(0);
+    var buf = std.ArrayList(u8).init(allocator);
+    while (true) {
+        stdin.readUntilDelimiterArrayList(&buf, '\n', math.maxInt(usize)) catch |err| switch (err) {
+            error.EndOfStream => break,
+            else => |e| return e,
+        };
 
-        const curr = try fmt.parseInt(isize, str, 10);
+        const curr = try fmt.parseInt(isize, buf.items, 10);
         try draw(stdout, curr, min, max, len, steps);
-        try stdout.write("\n");
-    } else |err| switch (err) {
-        error.EndOfStream => {},
-        else => return err,
+        try stdout.writeAll("\n");
     }
 }
 
@@ -135,32 +117,32 @@ fn draw(stream: var, curr: isize, min: isize, max: isize, len: usize, steps: []c
         const fullness = math.max((abs_curr - drawed) / step, 0);
         const full_to_index = @floatToInt(usize, @intToFloat(f64, steps.len) * fullness);
         const real_index = math.min(full_to_index, steps.len - 1);
-        try stream.write(steps[real_index]);
+        try stream.writeAll(steps[real_index]);
     }
 }
 
 fn testDraw(res: []const u8, curr: isize, min: isize, max: isize, len: usize, steps: []const []const u8) void {
     var buf: [100]u8 = undefined;
-    var stream = io.SliceOutStream.init(buf[0..]);
-    draw(&stream.stream, curr, min, max, len, steps) catch @panic("");
+    var stream = io.fixedBufferStream(&buf);
+    draw(stream.outStream(), curr, min, max, len, steps) catch @panic("");
     testing.expectEqualSlices(u8, res, stream.getWritten());
 }
 
 test "draw" {
-    testDraw("      ", -1, 0, 6, 6, [_][]const u8{ " ", "=" });
-    testDraw("      ", 0, 0, 6, 6, [_][]const u8{ " ", "=" });
-    testDraw("=     ", 1, 0, 6, 6, [_][]const u8{ " ", "=" });
-    testDraw("==    ", 2, 0, 6, 6, [_][]const u8{ " ", "=" });
-    testDraw("===   ", 3, 0, 6, 6, [_][]const u8{ " ", "=" });
-    testDraw("====  ", 4, 0, 6, 6, [_][]const u8{ " ", "=" });
-    testDraw("===== ", 5, 0, 6, 6, [_][]const u8{ " ", "=" });
-    testDraw("======", 6, 0, 6, 6, [_][]const u8{ " ", "=" });
-    testDraw("======", 7, 0, 6, 6, [_][]const u8{ " ", "=" });
-    testDraw("   ", 0, 0, 6, 3, [_][]const u8{ " ", "-", "=" });
-    testDraw("-  ", 1, 0, 6, 3, [_][]const u8{ " ", "-", "=" });
-    testDraw("=  ", 2, 0, 6, 3, [_][]const u8{ " ", "-", "=" });
-    testDraw("=- ", 3, 0, 6, 3, [_][]const u8{ " ", "-", "=" });
-    testDraw("== ", 4, 0, 6, 3, [_][]const u8{ " ", "-", "=" });
-    testDraw("==-", 5, 0, 6, 3, [_][]const u8{ " ", "-", "=" });
-    testDraw("===", 6, 0, 6, 3, [_][]const u8{ " ", "-", "=" });
+    testDraw("      ", -1, 0, 6, 6, &[_][]const u8{ " ", "=" });
+    testDraw("      ", 0, 0, 6, 6, &[_][]const u8{ " ", "=" });
+    testDraw("=     ", 1, 0, 6, 6, &[_][]const u8{ " ", "=" });
+    testDraw("==    ", 2, 0, 6, 6, &[_][]const u8{ " ", "=" });
+    testDraw("===   ", 3, 0, 6, 6, &[_][]const u8{ " ", "=" });
+    testDraw("====  ", 4, 0, 6, 6, &[_][]const u8{ " ", "=" });
+    testDraw("===== ", 5, 0, 6, 6, &[_][]const u8{ " ", "=" });
+    testDraw("======", 6, 0, 6, 6, &[_][]const u8{ " ", "=" });
+    testDraw("======", 7, 0, 6, 6, &[_][]const u8{ " ", "=" });
+    testDraw("   ", 0, 0, 6, 3, &[_][]const u8{ " ", "-", "=" });
+    testDraw("-  ", 1, 0, 6, 3, &[_][]const u8{ " ", "-", "=" });
+    testDraw("=  ", 2, 0, 6, 3, &[_][]const u8{ " ", "-", "=" });
+    testDraw("=- ", 3, 0, 6, 3, &[_][]const u8{ " ", "-", "=" });
+    testDraw("== ", 4, 0, 6, 3, &[_][]const u8{ " ", "-", "=" });
+    testDraw("==-", 5, 0, 6, 3, &[_][]const u8{ " ", "-", "=" });
+    testDraw("===", 6, 0, 6, 3, &[_][]const u8{ " ", "-", "=" });
 }
