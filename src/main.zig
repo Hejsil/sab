@@ -51,11 +51,11 @@ fn usage(stream: var) !void {
         \\
         \\To draw a simple spinner, simply set the length of the bar to 1
         \\and set max to be the last step:
-        \\echo 2 | sab -l 1 -M 3 -s '/-\|'
+        \\echo 2 | sab -l 1 -M 3 -s '/,-,\,|'
         \\\
         \\
         \\sab will draw multible lines, one for each line piped into it.
-        \\echo -e '0\n1\n2\n3' | sab -l 1 -M 3 -s '/-\|'
+        \\echo -e '0\n1\n2\n3' | sab -l 1 -M 3 -s '/,-,\,|'
         \\/
         \\-
         \\\
