@@ -5,6 +5,7 @@ const Mode = builtin.Mode;
 const Builder = std.build.Builder;
 
 pub fn build(b: *Builder) void {
+    b.setPreferredReleaseMode(.ReleaseFast);
     const mode = b.standardReleaseOptions();
     const exe = b.addExecutable("sab", "src/main.zig");
     exe.addPackagePath("zig-clap", "lib/zig-clap/clap.zig");

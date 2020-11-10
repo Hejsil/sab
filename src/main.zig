@@ -9,7 +9,6 @@ const math = std.math;
 const mem = std.mem;
 const unicode = std.unicode;
 
-const Clap = clap.ComptimeClap(clap.Help, &params);
 const Names = clap.Names;
 const Param = clap.Param(clap.Help);
 
@@ -25,7 +24,7 @@ const params = comptime blk: {
     };
 };
 
-fn usage(stream: var) !void {
+fn usage(stream: anytype) !void {
     try stream.writeAll(
         \\Usage: sab [OPTION]...
         \\sab will draw bars/spinners based on the values piped in through
@@ -82,8 +81,9 @@ pub fn main() !void {
 
     const allocator = &arena.allocator;
 
-    var arg_iter = try clap.args.OsIterator.init(allocator);
-    var args = Clap.parse(allocator, clap.args.OsIterator, &arg_iter) catch |err| {
+    var diag = clap.Diagnostic{};
+    var args = clap.parse(clap.Help, &params, allocator, &diag) catch |err| {
+        diag.report(stderr, err) catch {};
         usage(stderr) catch {};
         return err;
     };
@@ -137,7 +137,7 @@ pub fn main() !void {
     }
 }
 
-fn draw(stream: var, curr: isize, min: isize, max: isize, len: usize, typ: Type, steps: []const []const u8) !void {
+fn draw(stream: anytype, curr: isize, min: isize, max: isize, len: usize, typ: Type, steps: []const []const u8) !void {
     std.debug.assert(steps.len != 0);
     const abs_max = @intToFloat(f64, try math.cast(usize, max - min));
     const abs_curr = @intToFloat(f64, math.max(math.min(curr, max) - min, 0));
