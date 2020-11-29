@@ -66,15 +66,15 @@ fn usage(stream: anytype) !void {
     try clap.help(stream, &params);
 }
 
-const Type = enum {
+pub const Type = enum {
     normal,
     @"mark-center",
 };
 
 pub fn main() !void {
-    const stderr = io.getStdErr().outStream();
-    const stdout = io.getStdOut().outStream();
-    const stdin = io.getStdIn().inStream();
+    const stderr = io.getStdErr().writer();
+    const stdout = io.getStdOut().writer();
+    const stdin = io.getStdIn().reader();
 
     var arena = heap.ArenaAllocator.init(heap.page_allocator);
     defer arena.deinit();
@@ -137,7 +137,7 @@ pub fn main() !void {
     }
 }
 
-fn draw(stream: anytype, curr: isize, min: isize, max: isize, len: usize, typ: Type, steps: []const []const u8) !void {
+pub fn draw(stream: anytype, curr: isize, min: isize, max: isize, len: usize, typ: Type, steps: []const []const u8) !void {
     std.debug.assert(steps.len != 0);
     const abs_max = @intToFloat(f64, try math.cast(usize, max - min));
     const abs_curr = @intToFloat(f64, math.max(math.min(curr, max) - min, 0));
@@ -168,7 +168,7 @@ fn draw(stream: anytype, curr: isize, min: isize, max: isize, len: usize, typ: T
 fn testDraw(res: []const u8, curr: isize, min: isize, max: isize, len: usize, typ: Type, steps: []const []const u8) void {
     var buf: [100]u8 = undefined;
     var stream = io.fixedBufferStream(&buf);
-    draw(stream.outStream(), curr, min, max, len, typ, steps) catch @panic("");
+    draw(stream.writer(), curr, min, max, len, typ, steps) catch @panic("");
     testing.expectEqualSlices(u8, res, stream.getWritten());
 }
 
