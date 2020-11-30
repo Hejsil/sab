@@ -66,7 +66,7 @@ fn usage(stream: anytype) !void {
     try clap.help(stream, &params);
 }
 
-pub const Type = enum {
+const TypeArg = enum {
     normal,
     @"mark-center",
 };
@@ -94,7 +94,7 @@ pub fn main() !void {
     const min = try fmt.parseInt(isize, args.option("--min") orelse "0", 10);
     const max = try fmt.parseInt(isize, args.option("--max") orelse "100", 10);
     const len = try fmt.parseUnsigned(usize, args.option("--length") orelse "10", 10);
-    const typ = std.meta.stringToEnum(Type, args.option("--type") orelse "normal") orelse return error.InvalidType;
+    const typ = std.meta.stringToEnum(TypeArg, args.option("--type") orelse "normal") orelse return error.InvalidType;
     const steps = blk: {
         var str = std.ArrayList(u8).init(allocator);
         var res = std.ArrayList([]const u8).init(allocator);
@@ -132,77 +132,104 @@ pub fn main() !void {
         };
 
         const curr = try fmt.parseInt(isize, buf.items, 10);
-        try draw(stdout, curr, min, max, len, typ, steps);
+        try draw(stdout, isize, curr, .{
+            .min = min,
+            .max = max,
+            .len = len,
+            .type = switch (typ) {
+                .normal => Type.normal,
+                .@"mark-center" => Type.mark_center,
+            },
+            .steps = steps,
+        });
         try stdout.writeAll("\n");
     }
 }
 
-pub fn draw(stream: anytype, curr: isize, min: isize, max: isize, len: usize, typ: Type, steps: []const []const u8) !void {
-    std.debug.assert(steps.len != 0);
-    const abs_max = @intToFloat(f64, try math.cast(usize, max - min));
-    const abs_curr = @intToFloat(f64, math.max(math.min(curr, max) - min, 0));
+pub const Type = enum {
+    normal,
+    mark_center,
+};
 
-    const step = abs_max / @intToFloat(f64, len);
+pub fn DrawOptions(comptime T: type) type {
+    return struct {
+        min: T = 0,
+        max: T = 100,
+        len: usize = 10,
+        type: Type = .normal,
+        steps: []const []const u8 = &[_][]const u8{ " ", "=" },
+    };
+}
+
+pub fn draw(stream: anytype, comptime T: type, _curr: T, opts: DrawOptions(T)) !void {
+    std.debug.assert(opts.steps.len != 0);
+    const curr = math.min(_curr, opts.max);
+    const abs_max = @intToFloat(f64, try math.cast(usize, opts.max - opts.min));
+    const abs_curr = @intToFloat(f64, math.max(curr - opts.min, 0));
+
+    const step = abs_max / @intToFloat(f64, opts.len);
 
     // Draw upto the center of the bar
     var i: usize = 0;
     while (abs_curr > @intToFloat(f64, i + 1) * step) : (i += 1)
-        try stream.writeAll(steps[steps.len - 1]);
+        try stream.writeAll(opts.steps[opts.steps.len - 1]);
 
-    const min_index = @boolToInt(typ == .@"mark-center");
-    const max_index = math.max(math.sub(usize, steps.len, @as(usize, 1) + @boolToInt(typ == .@"mark-center")) catch 1, 1);
+    const min_index: usize = @boolToInt(opts.type == .mark_center);
+    const _max_index = math.sub(usize, opts.steps.len, 1 + min_index) catch 1;
+    const max_index = math.max(_max_index, 1);
+    const mid_steps = opts.steps[min_index..max_index];
 
     const drawn = @intToFloat(f64, i) * step;
     const fullness = (abs_curr - drawn) / step;
-    const full_to_index = @floatToInt(usize, @intToFloat(f64, steps[min_index..max_index].len) * fullness);
+    const full_to_index = @floatToInt(usize, @intToFloat(f64, mid_steps.len) * fullness);
 
     const real_index = math.min(full_to_index + min_index, max_index);
-    try stream.writeAll(steps[real_index]);
+    try stream.writeAll(opts.steps[real_index]);
     i += 1;
 
     // Draw the rest of the bar
-    while (i < len) : (i += 1)
-        try stream.writeAll(steps[0]);
+    while (i < opts.len) : (i += 1)
+        try stream.writeAll(opts.steps[0]);
 }
 
-fn testDraw(res: []const u8, curr: isize, min: isize, max: isize, len: usize, typ: Type, steps: []const []const u8) void {
+fn testDraw(res: []const u8, curr: isize, opts: DrawOptions(isize)) void {
     var buf: [100]u8 = undefined;
     var stream = io.fixedBufferStream(&buf);
-    draw(stream.writer(), curr, min, max, len, typ, steps) catch @panic("");
-    testing.expectEqualSlices(u8, res, stream.getWritten());
+    draw(stream.writer(), isize, curr, opts) catch @panic("");
+    testing.expectEqualStrings(res, stream.getWritten());
 }
 
 test "draw" {
-    testDraw("      ", -1, 0, 6, 6, .normal, &[_][]const u8{ " ", "=" });
-    testDraw("      ", 0, 0, 6, 6, .normal, &[_][]const u8{ " ", "=" });
-    testDraw("=     ", 1, 0, 6, 6, .normal, &[_][]const u8{ " ", "=" });
-    testDraw("==    ", 2, 0, 6, 6, .normal, &[_][]const u8{ " ", "=" });
-    testDraw("===   ", 3, 0, 6, 6, .normal, &[_][]const u8{ " ", "=" });
-    testDraw("====  ", 4, 0, 6, 6, .normal, &[_][]const u8{ " ", "=" });
-    testDraw("===== ", 5, 0, 6, 6, .normal, &[_][]const u8{ " ", "=" });
-    testDraw("======", 6, 0, 6, 6, .normal, &[_][]const u8{ " ", "=" });
-    testDraw("======", 7, 0, 6, 6, .normal, &[_][]const u8{ " ", "=" });
-    testDraw("   ", 0, 0, 6, 3, .normal, &[_][]const u8{ " ", "-", "=" });
-    testDraw("-  ", 1, 0, 6, 3, .normal, &[_][]const u8{ " ", "-", "=" });
-    testDraw("=  ", 2, 0, 6, 3, .normal, &[_][]const u8{ " ", "-", "=" });
-    testDraw("=- ", 3, 0, 6, 3, .normal, &[_][]const u8{ " ", "-", "=" });
-    testDraw("== ", 4, 0, 6, 3, .normal, &[_][]const u8{ " ", "-", "=" });
-    testDraw("==-", 5, 0, 6, 3, .normal, &[_][]const u8{ " ", "-", "=" });
-    testDraw("===", 6, 0, 6, 3, .normal, &[_][]const u8{ " ", "-", "=" });
-    testDraw("=     ", -1, 0, 6, 6, .@"mark-center", &[_][]const u8{ " ", "=" });
-    testDraw("=     ", 0, 0, 6, 6, .@"mark-center", &[_][]const u8{ " ", "=" });
-    testDraw("=     ", 1, 0, 6, 6, .@"mark-center", &[_][]const u8{ " ", "=" });
-    testDraw("==    ", 2, 0, 6, 6, .@"mark-center", &[_][]const u8{ " ", "=" });
-    testDraw("===   ", 3, 0, 6, 6, .@"mark-center", &[_][]const u8{ " ", "=" });
-    testDraw("====  ", 4, 0, 6, 6, .@"mark-center", &[_][]const u8{ " ", "=" });
-    testDraw("===== ", 5, 0, 6, 6, .@"mark-center", &[_][]const u8{ " ", "=" });
-    testDraw("======", 6, 0, 6, 6, .@"mark-center", &[_][]const u8{ " ", "=" });
-    testDraw("======", 7, 0, 6, 6, .@"mark-center", &[_][]const u8{ " ", "=" });
-    testDraw("-  ", 0, 0, 6, 3, .@"mark-center", &[_][]const u8{ " ", "-", "=" });
-    testDraw("-  ", 1, 0, 6, 3, .@"mark-center", &[_][]const u8{ " ", "-", "=" });
-    testDraw("-  ", 2, 0, 6, 3, .@"mark-center", &[_][]const u8{ " ", "-", "=" });
-    testDraw("=- ", 3, 0, 6, 3, .@"mark-center", &[_][]const u8{ " ", "-", "=" });
-    testDraw("=- ", 4, 0, 6, 3, .@"mark-center", &[_][]const u8{ " ", "-", "=" });
-    testDraw("==-", 5, 0, 6, 3, .@"mark-center", &[_][]const u8{ " ", "-", "=" });
-    testDraw("==-", 6, 0, 6, 3, .@"mark-center", &[_][]const u8{ " ", "-", "=" });
+    testDraw("      ", -1, .{ .min = 0, .max = 6, .len = 6 });
+    testDraw("      ", 0, .{ .min = 0, .max = 6, .len = 6 });
+    testDraw("=     ", 1, .{ .min = 0, .max = 6, .len = 6 });
+    testDraw("==    ", 2, .{ .min = 0, .max = 6, .len = 6 });
+    testDraw("===   ", 3, .{ .min = 0, .max = 6, .len = 6 });
+    testDraw("====  ", 4, .{ .min = 0, .max = 6, .len = 6 });
+    testDraw("===== ", 5, .{ .min = 0, .max = 6, .len = 6 });
+    testDraw("======", 6, .{ .min = 0, .max = 6, .len = 6 });
+    testDraw("======", 7, .{ .min = 0, .max = 6, .len = 6 });
+    testDraw("   ", 0, .{ .min = 0, .max = 6, .len = 3, .steps = &[_][]const u8{ " ", "-", "=" } });
+    testDraw("-  ", 1, .{ .min = 0, .max = 6, .len = 3, .steps = &[_][]const u8{ " ", "-", "=" } });
+    testDraw("=  ", 2, .{ .min = 0, .max = 6, .len = 3, .steps = &[_][]const u8{ " ", "-", "=" } });
+    testDraw("=- ", 3, .{ .min = 0, .max = 6, .len = 3, .steps = &[_][]const u8{ " ", "-", "=" } });
+    testDraw("== ", 4, .{ .min = 0, .max = 6, .len = 3, .steps = &[_][]const u8{ " ", "-", "=" } });
+    testDraw("==-", 5, .{ .min = 0, .max = 6, .len = 3, .steps = &[_][]const u8{ " ", "-", "=" } });
+    testDraw("===", 6, .{ .min = 0, .max = 6, .len = 3, .steps = &[_][]const u8{ " ", "-", "=" } });
+    testDraw("=     ", -1, .{ .min = 0, .max = 6, .len = 6, .type = .mark_center, .steps = &[_][]const u8{ " ", "=" } });
+    testDraw("=     ", 0, .{ .min = 0, .max = 6, .len = 6, .type = .mark_center, .steps = &[_][]const u8{ " ", "=" } });
+    testDraw("=     ", 1, .{ .min = 0, .max = 6, .len = 6, .type = .mark_center, .steps = &[_][]const u8{ " ", "=" } });
+    testDraw("==    ", 2, .{ .min = 0, .max = 6, .len = 6, .type = .mark_center, .steps = &[_][]const u8{ " ", "=" } });
+    testDraw("===   ", 3, .{ .min = 0, .max = 6, .len = 6, .type = .mark_center, .steps = &[_][]const u8{ " ", "=" } });
+    testDraw("====  ", 4, .{ .min = 0, .max = 6, .len = 6, .type = .mark_center, .steps = &[_][]const u8{ " ", "=" } });
+    testDraw("===== ", 5, .{ .min = 0, .max = 6, .len = 6, .type = .mark_center, .steps = &[_][]const u8{ " ", "=" } });
+    testDraw("======", 6, .{ .min = 0, .max = 6, .len = 6, .type = .mark_center, .steps = &[_][]const u8{ " ", "=" } });
+    testDraw("======", 7, .{ .min = 0, .max = 6, .len = 6, .type = .mark_center, .steps = &[_][]const u8{ " ", "=" } });
+    testDraw("-  ", 0, .{ .min = 0, .max = 6, .len = 3, .type = .mark_center, .steps = &[_][]const u8{ " ", "-", "=" } });
+    testDraw("-  ", 1, .{ .min = 0, .max = 6, .len = 3, .type = .mark_center, .steps = &[_][]const u8{ " ", "-", "=" } });
+    testDraw("-  ", 2, .{ .min = 0, .max = 6, .len = 3, .type = .mark_center, .steps = &[_][]const u8{ " ", "-", "=" } });
+    testDraw("=- ", 3, .{ .min = 0, .max = 6, .len = 3, .type = .mark_center, .steps = &[_][]const u8{ " ", "-", "=" } });
+    testDraw("=- ", 4, .{ .min = 0, .max = 6, .len = 3, .type = .mark_center, .steps = &[_][]const u8{ " ", "-", "=" } });
+    testDraw("==-", 5, .{ .min = 0, .max = 6, .len = 3, .type = .mark_center, .steps = &[_][]const u8{ " ", "-", "=" } });
+    testDraw("==-", 6, .{ .min = 0, .max = 6, .len = 3, .type = .mark_center, .steps = &[_][]const u8{ " ", "-", "=" } });
 }
