@@ -1,12 +1,12 @@
 const clap = @import("zig-clap");
 const std = @import("std");
 
-const testing = std.testing;
 const fmt = std.fmt;
 const heap = std.heap;
 const io = std.io;
 const math = std.math;
 const mem = std.mem;
+const testing = std.testing;
 const unicode = std.unicode;
 
 const Names = clap.Names;
@@ -82,7 +82,7 @@ pub fn main() !void {
     const allocator = &arena.allocator;
 
     var diag = clap.Diagnostic{};
-    var args = clap.parse(clap.Help, &params, allocator, &diag) catch |err| {
+    var args = clap.parse(clap.Help, &params, .{ .diagnostic = &diag }) catch |err| {
         diag.report(stderr, err) catch {};
         usage(stderr) catch {};
         return err;
@@ -192,44 +192,44 @@ pub fn draw(stream: anytype, comptime T: type, _curr: T, opts: DrawOptions(T)) !
         try stream.writeAll(opts.steps[0]);
 }
 
-fn testDraw(res: []const u8, curr: isize, opts: DrawOptions(isize)) void {
+fn testDraw(res: []const u8, curr: isize, opts: DrawOptions(isize)) !void {
     var buf: [100]u8 = undefined;
     var stream = io.fixedBufferStream(&buf);
-    draw(stream.writer(), isize, curr, opts) catch @panic("");
-    testing.expectEqualStrings(res, stream.getWritten());
+    try draw(stream.writer(), isize, curr, opts);
+    try testing.expectEqualStrings(res, stream.getWritten());
 }
 
 test "draw" {
-    testDraw("      ", -1, .{ .min = 0, .max = 6, .len = 6 });
-    testDraw("      ", 0, .{ .min = 0, .max = 6, .len = 6 });
-    testDraw("=     ", 1, .{ .min = 0, .max = 6, .len = 6 });
-    testDraw("==    ", 2, .{ .min = 0, .max = 6, .len = 6 });
-    testDraw("===   ", 3, .{ .min = 0, .max = 6, .len = 6 });
-    testDraw("====  ", 4, .{ .min = 0, .max = 6, .len = 6 });
-    testDraw("===== ", 5, .{ .min = 0, .max = 6, .len = 6 });
-    testDraw("======", 6, .{ .min = 0, .max = 6, .len = 6 });
-    testDraw("======", 7, .{ .min = 0, .max = 6, .len = 6 });
-    testDraw("   ", 0, .{ .min = 0, .max = 6, .len = 3, .steps = &[_][]const u8{ " ", "-", "=" } });
-    testDraw("-  ", 1, .{ .min = 0, .max = 6, .len = 3, .steps = &[_][]const u8{ " ", "-", "=" } });
-    testDraw("=  ", 2, .{ .min = 0, .max = 6, .len = 3, .steps = &[_][]const u8{ " ", "-", "=" } });
-    testDraw("=- ", 3, .{ .min = 0, .max = 6, .len = 3, .steps = &[_][]const u8{ " ", "-", "=" } });
-    testDraw("== ", 4, .{ .min = 0, .max = 6, .len = 3, .steps = &[_][]const u8{ " ", "-", "=" } });
-    testDraw("==-", 5, .{ .min = 0, .max = 6, .len = 3, .steps = &[_][]const u8{ " ", "-", "=" } });
-    testDraw("===", 6, .{ .min = 0, .max = 6, .len = 3, .steps = &[_][]const u8{ " ", "-", "=" } });
-    testDraw("=     ", -1, .{ .min = 0, .max = 6, .len = 6, .type = .mark_center, .steps = &[_][]const u8{ " ", "=" } });
-    testDraw("=     ", 0, .{ .min = 0, .max = 6, .len = 6, .type = .mark_center, .steps = &[_][]const u8{ " ", "=" } });
-    testDraw("=     ", 1, .{ .min = 0, .max = 6, .len = 6, .type = .mark_center, .steps = &[_][]const u8{ " ", "=" } });
-    testDraw("==    ", 2, .{ .min = 0, .max = 6, .len = 6, .type = .mark_center, .steps = &[_][]const u8{ " ", "=" } });
-    testDraw("===   ", 3, .{ .min = 0, .max = 6, .len = 6, .type = .mark_center, .steps = &[_][]const u8{ " ", "=" } });
-    testDraw("====  ", 4, .{ .min = 0, .max = 6, .len = 6, .type = .mark_center, .steps = &[_][]const u8{ " ", "=" } });
-    testDraw("===== ", 5, .{ .min = 0, .max = 6, .len = 6, .type = .mark_center, .steps = &[_][]const u8{ " ", "=" } });
-    testDraw("======", 6, .{ .min = 0, .max = 6, .len = 6, .type = .mark_center, .steps = &[_][]const u8{ " ", "=" } });
-    testDraw("======", 7, .{ .min = 0, .max = 6, .len = 6, .type = .mark_center, .steps = &[_][]const u8{ " ", "=" } });
-    testDraw("-  ", 0, .{ .min = 0, .max = 6, .len = 3, .type = .mark_center, .steps = &[_][]const u8{ " ", "-", "=" } });
-    testDraw("-  ", 1, .{ .min = 0, .max = 6, .len = 3, .type = .mark_center, .steps = &[_][]const u8{ " ", "-", "=" } });
-    testDraw("-  ", 2, .{ .min = 0, .max = 6, .len = 3, .type = .mark_center, .steps = &[_][]const u8{ " ", "-", "=" } });
-    testDraw("=- ", 3, .{ .min = 0, .max = 6, .len = 3, .type = .mark_center, .steps = &[_][]const u8{ " ", "-", "=" } });
-    testDraw("=- ", 4, .{ .min = 0, .max = 6, .len = 3, .type = .mark_center, .steps = &[_][]const u8{ " ", "-", "=" } });
-    testDraw("==-", 5, .{ .min = 0, .max = 6, .len = 3, .type = .mark_center, .steps = &[_][]const u8{ " ", "-", "=" } });
-    testDraw("==-", 6, .{ .min = 0, .max = 6, .len = 3, .type = .mark_center, .steps = &[_][]const u8{ " ", "-", "=" } });
+    try testDraw("      ", -1, .{ .min = 0, .max = 6, .len = 6 });
+    try testDraw("      ", 0, .{ .min = 0, .max = 6, .len = 6 });
+    try testDraw("=     ", 1, .{ .min = 0, .max = 6, .len = 6 });
+    try testDraw("==    ", 2, .{ .min = 0, .max = 6, .len = 6 });
+    try testDraw("===   ", 3, .{ .min = 0, .max = 6, .len = 6 });
+    try testDraw("====  ", 4, .{ .min = 0, .max = 6, .len = 6 });
+    try testDraw("===== ", 5, .{ .min = 0, .max = 6, .len = 6 });
+    try testDraw("======", 6, .{ .min = 0, .max = 6, .len = 6 });
+    try testDraw("======", 7, .{ .min = 0, .max = 6, .len = 6 });
+    try testDraw("   ", 0, .{ .min = 0, .max = 6, .len = 3, .steps = &[_][]const u8{ " ", "-", "=" } });
+    try testDraw("-  ", 1, .{ .min = 0, .max = 6, .len = 3, .steps = &[_][]const u8{ " ", "-", "=" } });
+    try testDraw("=  ", 2, .{ .min = 0, .max = 6, .len = 3, .steps = &[_][]const u8{ " ", "-", "=" } });
+    try testDraw("=- ", 3, .{ .min = 0, .max = 6, .len = 3, .steps = &[_][]const u8{ " ", "-", "=" } });
+    try testDraw("== ", 4, .{ .min = 0, .max = 6, .len = 3, .steps = &[_][]const u8{ " ", "-", "=" } });
+    try testDraw("==-", 5, .{ .min = 0, .max = 6, .len = 3, .steps = &[_][]const u8{ " ", "-", "=" } });
+    try testDraw("===", 6, .{ .min = 0, .max = 6, .len = 3, .steps = &[_][]const u8{ " ", "-", "=" } });
+    try testDraw("=     ", -1, .{ .min = 0, .max = 6, .len = 6, .type = .mark_center, .steps = &[_][]const u8{ " ", "=" } });
+    try testDraw("=     ", 0, .{ .min = 0, .max = 6, .len = 6, .type = .mark_center, .steps = &[_][]const u8{ " ", "=" } });
+    try testDraw("=     ", 1, .{ .min = 0, .max = 6, .len = 6, .type = .mark_center, .steps = &[_][]const u8{ " ", "=" } });
+    try testDraw("==    ", 2, .{ .min = 0, .max = 6, .len = 6, .type = .mark_center, .steps = &[_][]const u8{ " ", "=" } });
+    try testDraw("===   ", 3, .{ .min = 0, .max = 6, .len = 6, .type = .mark_center, .steps = &[_][]const u8{ " ", "=" } });
+    try testDraw("====  ", 4, .{ .min = 0, .max = 6, .len = 6, .type = .mark_center, .steps = &[_][]const u8{ " ", "=" } });
+    try testDraw("===== ", 5, .{ .min = 0, .max = 6, .len = 6, .type = .mark_center, .steps = &[_][]const u8{ " ", "=" } });
+    try testDraw("======", 6, .{ .min = 0, .max = 6, .len = 6, .type = .mark_center, .steps = &[_][]const u8{ " ", "=" } });
+    try testDraw("======", 7, .{ .min = 0, .max = 6, .len = 6, .type = .mark_center, .steps = &[_][]const u8{ " ", "=" } });
+    try testDraw("-  ", 0, .{ .min = 0, .max = 6, .len = 3, .type = .mark_center, .steps = &[_][]const u8{ " ", "-", "=" } });
+    try testDraw("-  ", 1, .{ .min = 0, .max = 6, .len = 3, .type = .mark_center, .steps = &[_][]const u8{ " ", "-", "=" } });
+    try testDraw("-  ", 2, .{ .min = 0, .max = 6, .len = 3, .type = .mark_center, .steps = &[_][]const u8{ " ", "-", "=" } });
+    try testDraw("=- ", 3, .{ .min = 0, .max = 6, .len = 3, .type = .mark_center, .steps = &[_][]const u8{ " ", "-", "=" } });
+    try testDraw("=- ", 4, .{ .min = 0, .max = 6, .len = 3, .type = .mark_center, .steps = &[_][]const u8{ " ", "-", "=" } });
+    try testDraw("==-", 5, .{ .min = 0, .max = 6, .len = 3, .type = .mark_center, .steps = &[_][]const u8{ " ", "-", "=" } });
+    try testDraw("==-", 6, .{ .min = 0, .max = 6, .len = 3, .type = .mark_center, .steps = &[_][]const u8{ " ", "-", "=" } });
 }

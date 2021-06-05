@@ -1,7 +1,5 @@
-const builtin = @import("builtin");
 const std = @import("std");
 
-const Mode = builtin.Mode;
 const Builder = std.build.Builder;
 
 pub fn build(b: *Builder) void {
@@ -12,8 +10,9 @@ pub fn build(b: *Builder) void {
     exe.setBuildMode(mode);
 
     const test_all_step = b.step("test", "Run all tests in all modes.");
-    inline for ([_]Mode{ Mode.Debug, Mode.ReleaseFast, Mode.ReleaseSafe, Mode.ReleaseSmall }) |test_mode| {
-        const mode_str = comptime modeToString(test_mode);
+    inline for (@typeInfo(std.builtin.Mode).Enum.fields) |field| {
+        const test_mode = @field(std.builtin.Mode, field.name);
+        const mode_str = @tagName(test_mode);
 
         const tests = b.addTest("src/main.zig");
         tests.setBuildMode(test_mode);
@@ -26,13 +25,4 @@ pub fn build(b: *Builder) void {
 
     b.default_step.dependOn(&exe.step);
     b.installArtifact(exe);
-}
-
-fn modeToString(mode: Mode) []const u8 {
-    return switch (mode) {
-        Mode.Debug => "debug",
-        Mode.ReleaseFast => "release-fast",
-        Mode.ReleaseSafe => "release-safe",
-        Mode.ReleaseSmall => "release-small",
-    };
 }
