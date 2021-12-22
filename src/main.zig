@@ -12,16 +12,13 @@ const unicode = std.unicode;
 const Names = clap.Names;
 const Param = clap.Param(clap.Help);
 
-const params = comptime blk: {
-    @setEvalBranchQuota(100000);
-    break :blk [_]Param{
-        clap.parseParam("-h, --help                       print this message to stdout") catch unreachable,
-        clap.parseParam("-l, --length <NUM>               the length of the bar (default: 10)") catch unreachable,
-        clap.parseParam("-m, --min    <NUM>               minimum value (default: 0)") catch unreachable,
-        clap.parseParam("-M, --max    <NUM>               maximum value (default: 100)") catch unreachable,
-        clap.parseParam("-s, --steps  <LIST>              a comma separated list of the steps used to draw the bar (default: ' ,=')") catch unreachable,
-        clap.parseParam("-t, --type <normal|mark-center>  the type of bar to draw (default: normal)") catch unreachable,
-    };
+const params = [_]Param{
+    clap.parseParam("-h, --help                       print this message to stdout") catch unreachable,
+    clap.parseParam("-l, --length <NUM>               the length of the bar (default: 10)") catch unreachable,
+    clap.parseParam("-m, --min    <NUM>               minimum value (default: 0)") catch unreachable,
+    clap.parseParam("-M, --max    <NUM>               maximum value (default: 100)") catch unreachable,
+    clap.parseParam("-s, --steps  <LIST>              a comma separated list of the steps used to draw the bar (default: ' ,=')") catch unreachable,
+    clap.parseParam("-t, --type <normal|mark-center>  the type of bar to draw (default: normal)") catch unreachable,
 };
 
 fn usage(stream: anytype) !void {
@@ -79,7 +76,7 @@ pub fn main() !void {
     var arena = heap.ArenaAllocator.init(heap.page_allocator);
     defer arena.deinit();
 
-    const allocator = &arena.allocator;
+    const allocator = arena.allocator();
 
     var diag = clap.Diagnostic{};
     var args = clap.parse(clap.Help, &params, .{ .diagnostic = &diag }) catch |err| {
