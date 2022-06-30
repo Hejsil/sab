@@ -160,9 +160,11 @@ pub fn DrawOptions(comptime T: type) type {
 
 pub fn draw(stream: anytype, comptime T: type, _curr: T, opts: DrawOptions(T)) !void {
     std.debug.assert(opts.steps.len != 0);
-    const curr = math.min(_curr, opts.max);
-    const abs_max = @intToFloat(f64, try math.cast(usize, opts.max - opts.min));
-    const abs_curr = @intToFloat(f64, math.max(curr - opts.min, 0));
+    const min = math.min(opts.min, opts.max);
+    const max = math.max(opts.min, opts.max);
+    const curr = math.min(_curr, max);
+    const abs_max = @intToFloat(f64, max - min);
+    const abs_curr = @intToFloat(f64, math.max(curr - min, 0));
 
     const step = abs_max / @intToFloat(f64, opts.len);
 
