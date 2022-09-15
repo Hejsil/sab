@@ -12,14 +12,25 @@ const unicode = std.unicode;
 const Names = clap.Names;
 const Param = clap.Param(clap.Help);
 
-const params = [_]Param{
-    clap.parseParam("-h, --help                       print this message to stdout") catch unreachable,
-    clap.parseParam("-l, --length <NUM>               the length of the bar (default: 10)") catch unreachable,
-    clap.parseParam("-m, --min    <NUM>               minimum value (default: 0)") catch unreachable,
-    clap.parseParam("-M, --max    <NUM>               maximum value (default: 100)") catch unreachable,
-    clap.parseParam("-s, --steps  <LIST>              a comma separated list of the steps used to draw the bar (default: ' ,=')") catch unreachable,
-    clap.parseParam("-t, --type <normal|mark-center>  the type of bar to draw (default: normal)") catch unreachable,
-};
+const params = clap.parseParamsComptime(
+    \\-h, --help
+    \\    Print this message to stdout
+    \\
+    \\-l, --length <usize>
+    \\    The length of the bar (default: 10)
+    \\
+    \\-m, --min <isize>
+    \\    Minimum value (default: 0)
+    \\
+    \\-M, --max <isize>
+    \\    Maximum value (default: 100)
+    \\
+    \\-s, --steps <str>
+    \\    A comma separated list of the steps used to draw the bar (default: ' ,=')
+    \\
+    \\-t, --type <str>
+    \\    The type of bar to draw (options: normal, mark-center) (default: normal)
+);
 
 fn usage(stream: anytype) !void {
     try stream.writeAll(
@@ -60,7 +71,7 @@ fn usage(stream: anytype) !void {
         \\Options:
         \\
     );
-    try clap.help(stream, &params);
+    try clap.help(stream, clap.Help, &params, .{});
 }
 
 const TypeArg = enum {
@@ -79,23 +90,20 @@ pub fn main() !void {
     const allocator = arena.allocator();
 
     var diag = clap.Diagnostic{};
-    var args = clap.parse(clap.Help, &params, .{ .diagnostic = &diag }) catch |err| {
+    var args = clap.parse(clap.Help, &params, clap.parsers.default, .{ .diagnostic = &diag }) catch |err| {
         diag.report(stderr, err) catch {};
         usage(stderr) catch {};
         return err;
     };
 
-    if (args.flag("--help"))
+    if (args.args.help)
         return try usage(stdout);
 
-    const min = try fmt.parseInt(isize, args.option("--min") orelse "0", 10);
-    const max = try fmt.parseInt(isize, args.option("--max") orelse "100", 10);
-    const len = try fmt.parseUnsigned(usize, args.option("--length") orelse "10", 10);
-    const typ = std.meta.stringToEnum(TypeArg, args.option("--type") orelse "normal") orelse return error.InvalidType;
+    const typ = std.meta.stringToEnum(TypeArg, args.args.type orelse "normal") orelse return error.InvalidType;
     const steps = blk: {
         var str = std.ArrayList(u8).init(allocator);
         var res = std.ArrayList([]const u8).init(allocator);
-        const list = args.option("--steps") orelse " ,=";
+        const list = args.args.steps orelse " ,=";
 
         var i: usize = 0;
         while (i < list.len) : (i += 1) {
@@ -130,9 +138,9 @@ pub fn main() !void {
 
         const curr = try fmt.parseInt(isize, buf.items, 10);
         try draw(stdout, isize, curr, .{
-            .min = min,
-            .max = max,
-            .len = len,
+            .min = args.args.min orelse 0,
+            .max = args.args.min orelse 100,
+            .len = args.args.length orelse 10,
             .type = switch (typ) {
                 .normal => Type.normal,
                 .@"mark-center" => Type.mark_center,
