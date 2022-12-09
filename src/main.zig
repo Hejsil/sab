@@ -109,7 +109,7 @@ pub fn main() !void {
         while (i < list.len) : (i += 1) {
             const c = list[i];
             switch (c) {
-                ',' => try res.append(str.toOwnedSlice()),
+                ',' => try res.append(try str.toOwnedSlice()),
                 '\\' => {
                     i += 1;
                     const c2 = if (i < list.len) list[i] else 0;
@@ -121,12 +121,12 @@ pub fn main() !void {
                 else => try str.append(c),
             }
         }
-        try res.append(str.toOwnedSlice());
+        try res.append(try str.toOwnedSlice());
 
         if (res.items.len == 0)
             return error.NoSteps;
 
-        break :blk res.toOwnedSlice();
+        break :blk try res.toOwnedSlice();
     };
 
     var buf = std.ArrayList(u8).init(allocator);
