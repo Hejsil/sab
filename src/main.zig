@@ -1,4 +1,4 @@
-const clap = @import("zig-clap");
+const clap = @import("clap");
 const std = @import("std");
 
 const fmt = std.fmt;
