@@ -5,6 +5,9 @@ const Builder = std.build.Builder;
 pub fn build(b: *Builder) void {
     const optimize = b.standardOptimizeOption(.{});
     const target = b.standardTargetOptions(.{});
+
+    _ = b.addModule("sab", .{ .source_file = .{ .path = "src/main.zig" } });
+
     const exe = b.addExecutable(.{
         .name = "sab",
         .root_source_file = .{ .path = "src/main.zig" },
