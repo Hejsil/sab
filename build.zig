@@ -23,7 +23,7 @@ pub fn build(b: *Builder) void {
         .target = target,
         .optimize = optimize,
     });
-    test_step.dependOn(&tests.step);
+    test_step.dependOn(&tests.run().step);
 
     b.default_step.dependOn(&exe.step);
 }
