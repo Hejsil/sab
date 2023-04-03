@@ -96,7 +96,7 @@ pub fn main() !void {
         return err;
     };
 
-    if (args.args.help)
+    if (args.args.help != 0)
         return try usage(stdout);
 
     const typ = std.meta.stringToEnum(TypeArg, args.args.type orelse "normal") orelse return error.InvalidType;
