@@ -14,7 +14,6 @@ pub fn build(b: *Builder) void {
         .target = target,
         .optimize = optimize,
     });
-    const install_exe = b.addInstallArtifact(exe);
     exe.addAnonymousModule("clap", .{ .source_file = .{ .path = "lib/zig-clap/clap.zig" } });
 
     const test_step = b.step("test", "");
@@ -26,5 +25,5 @@ pub fn build(b: *Builder) void {
     const run_tests = b.addRunArtifact(tests);
     test_step.dependOn(&run_tests.step);
 
-    b.default_step.dependOn(&install_exe.step);
+    b.installArtifact(exe);
 }
