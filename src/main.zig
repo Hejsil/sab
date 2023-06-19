@@ -168,11 +168,11 @@ pub fn DrawOptions(comptime T: type) type {
 
 pub fn draw(stream: anytype, comptime T: type, _curr: T, opts: DrawOptions(T)) !void {
     std.debug.assert(opts.steps.len != 0);
-    const min = math.min(opts.min, opts.max);
-    const max = math.max(opts.min, opts.max);
-    const curr = math.min(_curr, max);
+    const min = @min(opts.min, opts.max);
+    const max = @max(opts.min, opts.max);
+    const curr = @min(_curr, max);
     const abs_max = @intToFloat(f64, max - min);
-    const abs_curr = @intToFloat(f64, math.max(curr - min, 0));
+    const abs_curr = @intToFloat(f64, @max(curr - min, 0));
 
     const step = abs_max / @intToFloat(f64, opts.len);
 
@@ -183,14 +183,14 @@ pub fn draw(stream: anytype, comptime T: type, _curr: T, opts: DrawOptions(T)) !
 
     const min_index: usize = @boolToInt(opts.type == .mark_center);
     const _max_index = math.sub(usize, opts.steps.len, 1 + min_index) catch 1;
-    const max_index = math.max(_max_index, 1);
+    const max_index = @max(_max_index, 1);
     const mid_steps = opts.steps[min_index..max_index];
 
     const drawn = @intToFloat(f64, i) * step;
     const fullness = (abs_curr - drawn) / step;
     const full_to_index = @floatToInt(usize, @intToFloat(f64, mid_steps.len) * fullness);
 
-    const real_index = math.min(full_to_index + min_index, max_index);
+    const real_index = @min(full_to_index + min_index, max_index);
     try stream.writeAll(opts.steps[real_index]);
     i += 1;
 
