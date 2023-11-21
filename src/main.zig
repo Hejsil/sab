@@ -90,7 +90,7 @@ pub fn main() !void {
     const allocator = arena.allocator();
 
     var diag = clap.Diagnostic{};
-    var args = clap.parse(clap.Help, &params, clap.parsers.default, .{ .diagnostic = &diag }) catch |err| {
+    const args = clap.parse(clap.Help, &params, clap.parsers.default, .{ .diagnostic = &diag }) catch |err| {
         diag.report(stderr, err) catch {};
         usage(stderr) catch {};
         return err;
