@@ -90,7 +90,10 @@ pub fn main() !void {
     const allocator = arena.allocator();
 
     var diag = clap.Diagnostic{};
-    const args = clap.parse(clap.Help, &params, clap.parsers.default, .{ .diagnostic = &diag }) catch |err| {
+    const args = clap.parse(clap.Help, &params, clap.parsers.default, .{
+        .allocator = allocator,
+        .diagnostic = &diag,
+    }) catch |err| {
         diag.report(stderr, err) catch {};
         usage(stderr) catch {};
         return err;
@@ -99,7 +102,8 @@ pub fn main() !void {
     if (args.args.help != 0)
         return try usage(stdout);
 
-    const typ = std.meta.stringToEnum(TypeArg, args.args.type orelse "normal") orelse return error.InvalidType;
+    const typ = std.meta.stringToEnum(TypeArg, args.args.type orelse "normal") orelse
+        return error.InvalidType;
     const steps = blk: {
         var str = std.ArrayList(u8).init(allocator);
         var res = std.ArrayList([]const u8).init(allocator);
