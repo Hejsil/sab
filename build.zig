@@ -1,12 +1,10 @@
 const std = @import("std");
 
-const Builder = std.build.Builder;
-
-pub fn build(b: *Builder) void {
+pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
     const target = b.standardTargetOptions(.{});
 
-    _ = b.addModule("sab", .{ .source_file = .{ .path = "src/main.zig" } });
+    _ = b.addModule("sab", .{ .root_source_file = .{ .path = "src/main.zig" } });
 
     const exe = b.addExecutable(.{
         .name = "sab",
@@ -14,7 +12,9 @@ pub fn build(b: *Builder) void {
         .target = target,
         .optimize = optimize,
     });
-    exe.addAnonymousModule("clap", .{ .source_file = .{ .path = "lib/zig-clap/clap.zig" } });
+    exe.root_module.addAnonymousImport("clap", .{
+        .root_source_file = .{ .path = "lib/zig-clap/clap.zig" },
+    });
 
     const test_step = b.step("test", "");
     const tests = b.addTest(.{
